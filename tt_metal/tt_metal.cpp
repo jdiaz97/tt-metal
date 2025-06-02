@@ -1064,45 +1064,45 @@ KernelHandle CreateEthernetKernel(
     return detail::AddKernel(program, kernel, eth_core_type);
 }
 
-    KernelHandle CreateKernel(
-        Program& program,
-        const std::string& file_name,
-        const std::variant<CoreCoord, CoreRange, CoreRangeSet>& core_spec,
-        const std::variant<DataMovementConfig, ComputeConfig, EthernetConfig>& config) {
+KernelHandle CreateKernel(
+    Program& program,
+    const std::string& file_name,
+    const std::variant<CoreCoord, CoreRange, CoreRangeSet>& core_spec,
+    const std::variant<DataMovementConfig, ComputeConfig, EthernetConfig>& config) {
 
-        // Validate the defines in the config
-        std::visit(
-            [](const auto& cfg) {
-                for (const auto& [key, value] : cfg.defines) {
-                    // Ensure the value is of type std::string
-                    if (value.empty() || value.find('\0') != std::string::npos) {
-                        throw std::invalid_argument(
-                            "Invalid define value for key '" + key +
-                            "'. Values must be non-empty strings without null characters.");
-                    }
+    // Validate the defines in the config
+    std::visit(
+        [](const auto& cfg) {
+            for (const auto& [key, value] : cfg.defines) {
+                // Ensure the value is of type std::string
+                if (value.empty() || value.find('\0') != std::string::npos) {
+                    throw std::invalid_argument(
+                        "Invalid define value for key '" + key +
+                        "'. Values must be non-empty strings without null characters.");
                 }
-            },
-            config);
-        
-        LIGHT_METAL_TRACE_FUNCTION_ENTRY();
-        KernelHandle kernel = std::visit(
-            [&](auto&& cfg) -> KernelHandle {
-                CoreRangeSet core_ranges = GetCoreRangeSet(core_spec);
-                KernelSource kernel_src(file_name, KernelSource::FILE_PATH);
-                using T = std::decay_t<decltype(cfg)>;
-                if constexpr (std::is_same_v<T, DataMovementConfig>) {
-                    return CreateDataMovementKernel(program, kernel_src, core_ranges, cfg);
-                } else if constexpr (std::is_same_v<T, ComputeConfig>) {
-                    return CreateComputeKernel(program, kernel_src, core_ranges, cfg);
-                } else if constexpr (std::is_same_v<T, EthernetConfig>) {
-                    return CreateEthernetKernel(program, kernel_src, core_ranges, cfg);
-                }
-            },
-            config);
+            }
+        },
+        config);
+    
+    LIGHT_METAL_TRACE_FUNCTION_ENTRY();
+    KernelHandle kernel = std::visit(
+        [&](auto&& cfg) -> KernelHandle {
+            CoreRangeSet core_ranges = GetCoreRangeSet(core_spec);
+            KernelSource kernel_src(file_name, KernelSource::FILE_PATH);
+            using T = std::decay_t<decltype(cfg)>;
+            if constexpr (std::is_same_v<T, DataMovementConfig>) {
+                return CreateDataMovementKernel(program, kernel_src, core_ranges, cfg);
+            } else if constexpr (std::is_same_v<T, ComputeConfig>) {
+                return CreateComputeKernel(program, kernel_src, core_ranges, cfg);
+            } else if constexpr (std::is_same_v<T, EthernetConfig>) {
+                return CreateEthernetKernel(program, kernel_src, core_ranges, cfg);
+            }
+        },
+        config);
 
-        LIGHT_METAL_TRACE_FUNCTION_CALL(CaptureCreateKernel, kernel, program, file_name, core_spec, config);
-        return kernel;
-    }
+    LIGHT_METAL_TRACE_FUNCTION_CALL(CaptureCreateKernel, kernel, program, file_name, core_spec, config);
+    return kernel;
+}
 
 KernelHandle CreateKernelFromString(
     Program& program,
